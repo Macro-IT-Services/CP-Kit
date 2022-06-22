@@ -1,0 +1,119 @@
+version: '3.1'
+
+services:
+  pixel-business-logic-dispatcher:
+    container_name: pixel-business-logic-dispatcher
+    image: pixel-business-logic-dispatcher:latest
+    restart: unless-stopped
+    environment: 
+      POSTGRES_DB: pixelcore
+      POSTGRES_HOST: "172.16.24.4:5432" 
+      GQL_HOST: "172.16.24.4:5000"
+      ADMIN_WORKER_PASSWORD: mysecretpassword
+      USER_MANAGEMENT_WORKER_PASSWORD: mysecretpassword
+
+FROM python:3.9-slim-buster
+
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+COPY start.sh .
+COPY http-bridge http-bridge
+COPY docs docs
+COPY test_sample.py .
+
+RUN chmod +x start.sh
+
+EXPOSE 5060
+
+CMD sleep 2; /start.sh
+
+#
+# 
+#
+#
+# Build stage
+#
+FROM golang:1.16.5-alpine AS builder
+
+ENV TARGET=pmdrv
+ENV SRCDIR=/go/src/app
+
+WORKDIR $SRCDIR
+COPY . .
+ENV CGO_ENABLED=0 
+RUN go build -o /$TARGET $TARGET.go
+
+#
+# Final stage
+#
+FROM alpine
+
+ENV TARGET=pmdrv
+ENV RUNDIR=/
+ENV DATADIR=/pmdata
+
+WORKDIR /
+
+COPY --from=pixelcore.azurecr.io/pixctl:latest /pixctl $RUNDIR
+COPY --from=builder /$TARGET $RUNDIR/
+COPY ./start $RUNDIR/
+
+COPY ./$DATADIR $DATADIR
+ADD ./$TARGET.yml $RUNDIR/
+ENTRYPOINT ["sh", "/start"]
+#EOF
+
+#
+# Copyright: Pixel Networks <support@pixel-networks.com> 
+# Author: Oleg Borodin <oleg.borodin@pixel-networks.com>
+#
+
+#
+# Build stage
+#
+FROM golang:1.16.5-alpine AS builder
+
+ENV TARGET=pmbri
+ENV SRCDIR=/go/src/app
+
+WORKDIR $SRCDIR
+COPY . .
+ENV CGO_ENABLED=0 
+RUN go build -o $TARGET $TARGET.go
+
+#
+# Final stage
+#
+#FROM scratch
+FROM alpine
+
+WORKDIR /
+
+ENV TARGET=pmbri
+ENV SRCDIR=/go/src/app
+ENV RUNDIR=/
+ENV DATADIR=/pmdata
+
+COPY --from=pixelcore.azurecr.io/pixctl:latest /pixctl $RUNDIR
+COPY --from=builder $SRCDIR/$TARGET $RUNDIR/
+
+COPY ./start $RUNDIR/
+
+COPY ./$DATADIR $DATADIR
+
+COPY ./$TARGET.yml $RUNDIR/
+ENTRYPOINT ["sh", "/start"]
+#EOF
+
+
+
+FROM library/nginx:latest
+MAINTAINER Pixel <support@pixel-networks.com>
+
+ENV API_CORE http://postgraphile:5000
+ENV MEDIASERVER http://mediaserver:3000
+
+COPY build/ /usr/share/nginx/pixel-board/html
+COPY site.conf /etc/nginx/conf.d/default.conf
+COPY site.conf /etc/nginx/conf.d/pixel-board.conf
