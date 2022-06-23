@@ -27,7 +27,7 @@ The Traffic Analysis Sensor system detects infected machines and their connectio
 The Platform has in its Core leverages The World's Most Advanced Open Source Relational Database - PostgreSQL. It allows structured but very flexible data storage including high speed processing and very rich functionality exposed to other components of the system via APIs. Platform supports two types of APIs, namely gRPC and GraphQL,  which can be used for two typical use cases.  gRPC API is a high-performance Southbound API with functions set optimized to high speed processing of  device data flow and device control functions. GraphQL is a modern and powerful API technology with a rich set of functionality which makes it a perfect fit for UI and business logic implementation. GraphQL is used as a Northbound API.
 CheckPoint integration kit modules are built-in and effectively complement the kernel components. They provide a convenient interaction with CheckPoint products, process display engines, while using the administration and connectivity of existing business logic and notification engines.
 
-PICTURE!!!!!
+![Image alt](https://github.com/Macro-IT-Services/CP-Kit/blob/6cea63189962ece1b3a8a73fb727697ad1c212fd/unnamed-5.png) 
 
 ## CheckPoint Bridge
 
